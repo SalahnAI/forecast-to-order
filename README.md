@@ -2,6 +2,8 @@
 
 **From probabilistic demand forecasts to shelf-ready orders — and the waste/availability trade-off in between.**
 
+**▶ Live demo: [forecast-to-order.streamlit.app](https://forecast-to-order.streamlit.app)** — drag the service-level dial and watch the network replay under the policy you chose.
+
 A forecast has no value until a decision consumes it. This repo implements the full loop for fresh-retail store ordering, end to end and fully reproducible on a laptop in under a minute:
 
 ```
@@ -68,6 +70,8 @@ uv venv && uv pip install -e ".[dev,app]"   # or: pip install -e ".[dev,app]"
 `run_demo.py --help` exposes the world size (stores/products/days), the holdout length, and the number of printed explanations.
 
 ### Interactive UI
+
+Live at **[forecast-to-order.streamlit.app](https://forecast-to-order.streamlit.app)** (first load trains the models, ~1 min; cached afterwards).
 
 `app.py` is the store-manager view of the same pipeline: pick a store and a delivery day, read the proposed order sheet with a plain-language explanation per line, and — the point of the exercise — drag the **service-level dial** and watch the network's fill rate, waste and profit move along the frontier. Every position of the dial is a full replay simulation of the holdout, not an interpolation. Deployable as-is on Streamlit Community Cloud (`requirements.txt` is provided).
 
