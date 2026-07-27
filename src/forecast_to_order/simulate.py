@@ -37,6 +37,7 @@ class SimResult:
     sold: int
     wasted: int
     delivered: int
+    orders: pd.DataFrame | None = None  # per-line decision log (collect_orders=True)
 
 
 def _target_level(day: dict, policy: str, quantiles: np.ndarray, crit_q: float) -> float:
@@ -55,6 +56,7 @@ def simulate_policy(
     catalog: pd.DataFrame,
     policy: str,
     quantiles: list[float],
+    collect_orders: bool = False,
 ) -> SimResult:
     """``test`` needs demand, lag_7 and the q_* prediction columns, one row per
     (store, product, date)."""
@@ -62,8 +64,9 @@ def simulate_policy(
     cat = catalog.set_index("product_id")
     tot_demand = tot_sold = tot_waste = tot_delivered = 0
     profit = 0.0
+    order_log: list[dict] = []
 
-    for (_, pid), g in test.groupby(["store_id", "product_id"], sort=False):
+    for (sid, pid), g in test.groupby(["store_id", "product_id"], sort=False):
         g = g.sort_values("date")
         prod = cat.loc[pid]
         life = int(prod["shelf_life"])
@@ -110,8 +113,27 @@ def simulate_policy(
 
             # Place tomorrow's order from tomorrow's forecast.
             if i + 1 < len(days):
-                target = _target_level(days[i + 1], policy, qs, crit_q)
-                on_order = order_quantity(target, float(inv.sum()), pack)
+                tomorrow = days[i + 1]
+                target = _target_level(tomorrow, policy, qs, crit_q)
+                position = float(inv.sum())
+                on_order = order_quantity(target, position, pack)
+                if collect_orders:
+                    order_log.append(
+                        {
+                            "store_id": sid,
+                            "product_id": pid,
+                            "date": tomorrow["date"],
+                            "target_q": crit_q if policy == "newsvendor" else (
+                                np.nan if policy == "naive" else float(policy.split("=")[1])
+                            ),
+                            "target_level": target,
+                            "inventory": position,
+                            "order": on_order,
+                            "q10": tomorrow[q_col(0.1)],
+                            "q50": tomorrow[q_col(0.5)],
+                            "q90": tomorrow[q_col(0.9)],
+                        }
+                    )
 
         # Unsold, unexpired stock at the horizon: count its cash back so the
         # profit comparison is not distorted by end-of-window inventory.
@@ -126,4 +148,5 @@ def simulate_policy(
         sold=int(tot_sold),
         wasted=int(tot_waste),
         delivered=int(tot_delivered),
+        orders=pd.DataFrame(order_log) if collect_orders else None,
     )

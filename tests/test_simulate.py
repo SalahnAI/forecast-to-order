@@ -42,3 +42,20 @@ def test_policies_run_on_all_supported_names(small_world):
     for pol in ["naive", "newsvendor", "q=0.5"]:
         r = simulate_policy(test, catalog, pol, QUANTILES)
         assert r.delivered > 0
+
+
+def test_order_log_is_consistent(small_world):
+    test, catalog = small_world
+    r = simulate_policy(test, catalog, "q=0.7", QUANTILES, collect_orders=True)
+    log = r.orders
+    assert log is not None and len(log) > 0
+    assert (log["order"] >= 0).all()
+    assert (log["inventory"] >= 0).all()
+    assert (log["target_q"] == 0.7).all()
+    # Every ordered quantity is a whole number of packs.
+    packs = log.merge(catalog[["product_id", "pack_size"]], on="product_id")
+    assert (packs["order"] % packs["pack_size"] == 0).all()
+    # One decision per (store, product) per day after the first.
+    n_pairs = test.groupby(["store_id", "product_id"]).ngroups
+    n_days = test["date"].nunique()
+    assert len(log) == n_pairs * (n_days - 1)

@@ -59,12 +59,17 @@ Store staff accept or override each order line; acceptance rate is a product met
 ## Run it
 
 ```bash
-uv venv && uv pip install -e ".[dev]"     # or: pip install -e ".[dev]"
-.venv/bin/python scripts/run_demo.py      # ~30s on a laptop; writes outputs/
-.venv/bin/python -m pytest                # unit tests
+uv venv && uv pip install -e ".[dev,app]"   # or: pip install -e ".[dev,app]"
+.venv/bin/python scripts/run_demo.py        # ~30s on a laptop; writes outputs/
+.venv/bin/python -m pytest                  # unit tests
+.venv/bin/streamlit run app.py              # interactive store-manager view
 ```
 
 `run_demo.py --help` exposes the world size (stores/products/days), the holdout length, and the number of printed explanations.
+
+### Interactive UI
+
+`app.py` is the store-manager view of the same pipeline: pick a store and a delivery day, read the proposed order sheet with a plain-language explanation per line, and — the point of the exercise — drag the **service-level dial** and watch the network's fill rate, waste and profit move along the frontier. Every position of the dial is a full replay simulation of the holdout, not an interpolation. Deployable as-is on Streamlit Community Cloud (`requirements.txt` is provided).
 
 ## Design notes
 
